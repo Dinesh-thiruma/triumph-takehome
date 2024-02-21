@@ -1,15 +1,17 @@
 package controllers
 
 import (
-    "github.com/gofiber/fiber/v2"
-    "github.com/your-username/go-crypto-server/services"
+	"github.com/gofiber/fiber/v2"
 )
 
 // HandleBuy handles requests to the /buy endpoint.
 func HandleBuy(c *fiber.Ctx) error {
-    // Parse query parameters
-    amount := c.Query("amount")
-    symbol := c.Query("symbol")
+	// Parse query parameters
+	amount := c.Query("amount")
+	symbol := c.Query("symbol")
 
-	return c.SendString("Received amount: " + amount + ", symbol: " + symbol)
+	result := services.ExecuteBuyOrder(amount, symbol)
+
+	// Return successful response
+	return c.JSON(result)
 }
