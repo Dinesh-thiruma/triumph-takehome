@@ -9,7 +9,7 @@ func main() {
 	app := fiber.New()
 
 	app.Get("/buy", controllers.HandleBuy)
-	// app.Get("/sell", controllers.HandleSell)
+	app.Get("/sell", controllers.HandleSell)
 
 	app.Listen(":4000")
 }

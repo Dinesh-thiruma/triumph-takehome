@@ -6,12 +6,12 @@ import (
 )
 
 // HandleBuy handles requests to the /buy endpoint.
-func HandleBuy(c *fiber.Ctx) error {
+func HandleSell(c *fiber.Ctx) error {
 	// Parse query parameters
 	amount := c.Query("amount")
 	symbol := c.Query("symbol")
 
-	resp := services.GetAverage(amount, symbol)
+	resp := services.GetAverageSell(amount, symbol)
 
 	return c.JSON(resp)
 }

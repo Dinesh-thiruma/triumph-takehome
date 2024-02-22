@@ -9,31 +9,31 @@ import (
 )
 
 // Pair struct to keep track of price, amount, and exchange for each log in the product book
-type Pair struct {
+type SellPair struct {
 	Price    float64
 	Amount   string
 	Exchange string
 }
 
 // Response struct to format the service's returned response to the controller
-type Response struct {
+type SellResponse struct {
 	BTCAmount float64  `json:"btcAmount"`
 	USDAmount float64  `json:"usdAmount"`
 	Exchange  []string `json:"exchange"`
 }
 
-// MinHeap data structure to efficiently return the min price to buy at
-type MinHeap []Pair
+// MaxHeap data structure to efficiently return the min price to buy at
+type Maxheap []Pair
 
-func (h MinHeap) Len() int           { return len(h) }
-func (h MinHeap) Less(i, j int) bool { return h[i].Amount < h[j].Amount }
-func (h MinHeap) Swap(i, j int)      { h[i], h[j] = h[j], h[i] }
+func (h Maxheap) Len() int           { return len(h) }
+func (h Maxheap) Less(i, j int) bool { return h[i].Amount > h[j].Amount }
+func (h Maxheap) Swap(i, j int)      { h[i], h[j] = h[j], h[i] }
 
-func (h *MinHeap) Push(x interface{}) {
+func (h *Maxheap) Push(x interface{}) {
 	*h = append(*h, x.(Pair))
 }
 
-func (h *MinHeap) Pop() interface{} {
+func (h *Maxheap) Pop() interface{} {
 	old := *h
 	n := len(old)
 	x := old[n-1]
@@ -41,10 +41,10 @@ func (h *MinHeap) Pop() interface{} {
 	return x
 }
 
-var minHeap MinHeap
+var maxHeap Maxheap
 
 // parse through coinbase data for a given symbol - store it in the given min heap
-func GetCoinbaseData(symbol string) {
+func GetCoinbaseDataSell(symbol string) {
 	resp, err := http.Get("https://api.exchange.coinbase.com/products/" + symbol + "/book?level=2")
 	if err != nil {
 		fmt.Println("Error:", err)
@@ -70,12 +70,12 @@ func GetCoinbaseData(symbol string) {
 		pair_flt_price, err := strconv.ParseFloat(price, 64)
 		err = err
 		amount := askInfo[1].(string)
-		heap.Push(&minHeap, Pair{Price: pair_flt_price, Amount: amount, Exchange: "Coinbase"})
+		heap.Push(&maxHeap, SellPair{Price: pair_flt_price, Amount: amount, Exchange: "Coinbase"})
 	}
 }
 
 // parse through kraken data for a given symbol - store it in the given min heap to merge with coinbase data
-func GetKrakenData(symbol string) {
+func GetKrakenDataSell(symbol string) {
 	resp, err := http.Get("https://api.kraken.com/0/public/Depth?pair=" + symbol)
 	if err != nil {
 		return
@@ -108,15 +108,15 @@ func GetKrakenData(symbol string) {
 		pair_flt_price, err := strconv.ParseFloat(price, 64)
 		err = err
 		amount := askInfo[1].(string)
-		heap.Push(&minHeap, Pair{Price: pair_flt_price, Amount: amount, Exchange: "Kraken"})
+		heap.Push(&maxHeap, SellPair{Price: pair_flt_price, Amount: amount, Exchange: "Kraken"})
 	}
 }
 
 // calculate the weighted average of the buy request for the given passed in amount
-func GetAverage(amount string, symbol string) Response {
-	heap.Init(&minHeap)
-	GetCoinbaseData(symbol)
-	GetKrakenData(symbol)
+func GetAverageSell(amount string, symbol string) SellResponse {
+	heap.Init(&maxHeap)
+	GetCoinbaseDataSell(symbol)
+	GetKrakenDataSell(symbol)
 
 	var totalAmount, totalPrice float64
 	float_amt, err := strconv.ParseFloat(amount, 64)
@@ -127,7 +127,7 @@ func GetAverage(amount string, symbol string) Response {
 
 	// Pop pairs until the total amount reaches or exceeds the requested amount
 	for totalAmount < float_amt && len(minHeap) > 0 {
-		pair := heap.Pop(&minHeap).(Pair)
+		pair := heap.Pop(&maxHeap).(Pair)
 		if pair.Exchange == "Kraken" {
 			kraken = true
 		} else {
@@ -150,7 +150,7 @@ func GetAverage(amount string, symbol string) Response {
 		exchange = append(exchange, "kraken")
 	}
 
-	resp := Response{
+	resp := SellResponse{
 		BTCAmount: float_amt,
 		USDAmount: weightedAvg,
 		Exchange:  exchange,
