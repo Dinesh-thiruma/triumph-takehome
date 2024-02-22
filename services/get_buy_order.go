@@ -47,14 +47,14 @@ var minHeap MinHeap
 func GetCoinbaseData(symbol string) {
 	resp, err := http.Get("https://api.exchange.coinbase.com/products/" + symbol + "/book?level=2")
 	if err != nil {
-		fmt.Println("Error:", err)
+		fmt.Println("Error: Cannot find "+symbol+" in Coinbase API product book.", err)
 		return
 	}
 	defer resp.Body.Close()
 
 	var data map[string]interface{}
 	if err := json.NewDecoder(resp.Body).Decode(&data); err != nil {
-		fmt.Println("Error:", err)
+		fmt.Println("Error: cannot decode response into JSON.", err)
 		return
 	}
 
@@ -68,7 +68,10 @@ func GetCoinbaseData(symbol string) {
 		askInfo := ask.([]interface{})
 		price := askInfo[0].(string)
 		pair_flt_price, err := strconv.ParseFloat(price, 64)
-		err = err
+		if err != nil {
+			fmt.Println("Error: Price is not a valid float.")
+			return
+		}
 		amount := askInfo[1].(string)
 		heap.Push(&minHeap, Pair{Price: pair_flt_price, Amount: amount, Exchange: "Coinbase"})
 	}
@@ -78,27 +81,32 @@ func GetCoinbaseData(symbol string) {
 func GetKrakenData(symbol string) {
 	resp, err := http.Get("https://api.kraken.com/0/public/Depth?pair=" + symbol)
 	if err != nil {
+		fmt.Println("Error: Cannot access Kraken API.")
 		return
 	}
 	defer resp.Body.Close()
 
 	var data map[string]interface{}
 	if err := json.NewDecoder(resp.Body).Decode(&data); err != nil {
+		fmt.Println("Error: Cannot decode response into JSON.")
 		return
 	}
 
 	result, ok := data["result"].(map[string]interface{})
 	if !ok {
+		fmt.Println("Error: Result is not an interface.")
 		return
 	}
 
-	XXBTZUSD, ok := result["XXBTZUSD"].(map[string]interface{})
+	stock, ok := result["XXBTZUSD"].(map[string]interface{})
 	if !ok {
+		fmt.Println("Error: Result is not an interface.")
 		return
 	}
 
-	asks, ok := XXBTZUSD["asks"].([]interface{})
+	asks, ok := stock["asks"].([]interface{})
 	if !ok {
+		fmt.Println("Error: Asks is not an interface.")
 		return
 	}
 

@@ -23,14 +23,14 @@ type SellResponse struct {
 }
 
 // MaxHeap data structure to efficiently return the min price to buy at
-type Maxheap []Pair
+type Maxheap []SellPair
 
 func (h Maxheap) Len() int           { return len(h) }
 func (h Maxheap) Less(i, j int) bool { return h[i].Amount > h[j].Amount }
 func (h Maxheap) Swap(i, j int)      { h[i], h[j] = h[j], h[i] }
 
 func (h *Maxheap) Push(x interface{}) {
-	*h = append(*h, x.(Pair))
+	*h = append(*h, x.(SellPair))
 }
 
 func (h *Maxheap) Pop() interface{} {
@@ -43,7 +43,7 @@ func (h *Maxheap) Pop() interface{} {
 
 var maxHeap Maxheap
 
-// parse through coinbase data for a given symbol - store it in the given min heap
+// parse through coinbase data for a given symbol - store it in the given max heap
 func GetCoinbaseDataSell(symbol string) {
 	resp, err := http.Get("https://api.exchange.coinbase.com/products/" + symbol + "/book?level=2")
 	if err != nil {
@@ -58,9 +58,9 @@ func GetCoinbaseDataSell(symbol string) {
 		return
 	}
 
-	asks, ok := data["asks"].([]interface{})
+	asks, ok := data["buys"].([]interface{})
 	if !ok {
-		fmt.Println("Error: 'asks' field not found or not an array")
+		fmt.Println("Error: 'buys' field not found or not an array")
 		return
 	}
 
@@ -74,7 +74,7 @@ func GetCoinbaseDataSell(symbol string) {
 	}
 }
 
-// parse through kraken data for a given symbol - store it in the given min heap to merge with coinbase data
+// parse through kraken data for a given symbol - store it in the given max heap to merge with coinbase data
 func GetKrakenDataSell(symbol string) {
 	resp, err := http.Get("https://api.kraken.com/0/public/Depth?pair=" + symbol)
 	if err != nil {
@@ -126,8 +126,8 @@ func GetAverageSell(amount string, symbol string) SellResponse {
 	coinbase := false
 
 	// Pop pairs until the total amount reaches or exceeds the requested amount
-	for totalAmount < float_amt && len(minHeap) > 0 {
-		pair := heap.Pop(&maxHeap).(Pair)
+	for totalAmount < float_amt && len(maxHeap) > 0 {
+		pair := heap.Pop(&maxHeap).(SellPair)
 		if pair.Exchange == "Kraken" {
 			kraken = true
 		} else {
